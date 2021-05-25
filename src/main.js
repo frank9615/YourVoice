@@ -20,8 +20,6 @@ function execShellCommand(cmd) {
     });
 }
 
-
-
 bot.on('voice', (msg) => {
     const chatId = msg.chat.id;
     if (expectedWord == "") {
@@ -33,11 +31,18 @@ bot.on('voice', (msg) => {
                 responseType: "stream"
             }).then((res) => {
                 res.data.pipe(fs.createWriteStream("audio/" + expectedWord + extension));
+                bot.sendMessage(chatId, "Parola Salvata");
+                //Trim silence at the original file
+                //let command = `ffmpeg -i audio/${expectedWord+extension} -af silenceremove=start_periods=1:stop_periods=1:detection=peak audio/${expectedWord}.mp3`;
+                //execShellCommand(command).then(() => {
+                //    fs.rmSync(`audio/${expectedWord+extension}`);
+                //});
+
             })
         });
+        expectedWord = "";
     }
 });
-
 
 bot.on('message', (msg) => {
     const chatId = msg.chat.id;
@@ -60,9 +65,13 @@ bot.on('message', (msg) => {
             }
         }
         if (missing_world.length == 0 && audio.length != 0) {
-            let command = 'ffmpeg -y -i concat:"' + audio.join('|') + '" -acodec mp3 temp.mp3';
+            let command = 'ffmpeg -y -i concat:"' + audio.join('|') + '" -acodec mp3 temp.mp3 && sox temp.mp3 out.mp3 silence 1 0.1 1% -1 0.5 1%';
+            //Ignore Silence
             execShellCommand(command).then((x) => {
-                bot.sendVoice(chatId, "temp.mp3");
+                bot.sendVoice(chatId, "out.mp3").then((x) => {
+                    fs.rmSync("temp.mp3");
+                    fs.rmSync("out.mp3");
+                });
             });
         } else {
             let inline_keyboard = [missing_world];
@@ -74,7 +83,6 @@ bot.on('message', (msg) => {
         }
     }
 });
-
 
 bot.on('callback_query', query => {
     const chatId = query.message.chat.id;
