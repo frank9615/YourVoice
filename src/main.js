@@ -6,8 +6,10 @@ const bot = new TelegramBot(token, { polling: true });
 const axios = require("axios").default;
 var path = require('path')
 const { exec } = require("child_process");
+const lineReader = require('line-reader');
 
 let expectedWord = "";
+let series = 1;
 
 function execShellCommand(cmd) {
     return new Promise((resolve, reject) => {
@@ -19,6 +21,28 @@ function execShellCommand(cmd) {
         });
     });
 }
+
+
+bot.onText(/\/populate/, (msg, match) => {
+    const chatId = msg.chat.id;
+    let audiodir = fs.readdirSync("audio");
+    lineReader.eachLine('dictionary/italian.txt', (line) => {
+        console.log(line);
+        let files = audiodir.filter((x) => x.startsWith(line));
+        if (files.length == 0) {
+            expectedWord = line;
+            bot.sendMessage(chatId, "Inviami una nota vocale con la parola: " + expectedWord);
+            return false;
+        }
+    });
+});
+
+bot.onText(/\/redo (.*)/, (msg, match) => {
+    const chatId = msg.chat.id;
+    expectedWord = match[1];
+    bot.sendMessage(chatId, "Inviami una nota vocale con la parola: " + expectedWord);
+
+});
 
 bot.on('voice', (msg) => {
     const chatId = msg.chat.id;
@@ -48,13 +72,13 @@ bot.on('message', (msg) => {
     const chatId = msg.chat.id;
     const userId = msg.from.id;
     let usr = msg.from.username || msg.from.first_name
-    if (msg.hasOwnProperty("text")) {
+    if (msg.hasOwnProperty("text") && !msg.text.startsWith("/")) {
         console.log("[" + msg.date + "] " + "[ChatID: " + chatId + "] [IdUser: " + msg.from.id + "] [Username: " + usr + "] has sent: " + msg.text)
-        let words = msg.text.split(" ");
+        let words = msg.text.toLowerCase().split(" ");
         let audio = [];
         let missing_world = [];
         for (let i = 0; i < words.length; i++) {
-            let files = fs.readdirSync("audio").filter((x) => x.startsWith(words[i]));
+            let files = fs.readdirSync("audio").filter((x) => x.split(".")[0] == words[i]);
             if (files.length > 0) {
                 audio.push("audio/" + files[0]);
             } else {
