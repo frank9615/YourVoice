@@ -32,6 +32,7 @@ bot.on('voice', (msg) => {
             }).then((res) => {
                 res.data.pipe(fs.createWriteStream("audio/" + expectedWord + extension));
                 bot.sendMessage(chatId, "Parola Salvata");
+                expectedWord = "";
                 //Trim silence at the original file
                 //let command = `ffmpeg -i audio/${expectedWord+extension} -af silenceremove=start_periods=1:stop_periods=1:detection=peak audio/${expectedWord}.mp3`;
                 //execShellCommand(command).then(() => {
@@ -40,7 +41,6 @@ bot.on('voice', (msg) => {
 
             })
         });
-        expectedWord = "";
     }
 });
 
